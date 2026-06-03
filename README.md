@@ -1,12 +1,12 @@
 # 🌵 Raízes do Nordeste API
 
-Sistema backend desenvolvido com Django REST Framework para gerenciamento de restaurante nordestino, com controle de pedidos, estoque, produtos, fidelidade, autenticação JWT e administração completa.
+Sistema backend desenvolvido com Django REST Framework para gerenciamento do restaurante Raízes do Nordeste, com controle de pedidos, estoque, produtos, fidelidade, autenticação JWT e administração completa.
 
 ---
 
 # 📌 Sobre o Projeto
 
-O **Raízes do Nordeste API** foi desenvolvido com o objetivo de simular um sistema real de gestão para restaurantes, permitindo:
+O **Raízes do Nordeste API** foi desenvolvido com o objetivo de simular um sistema real de gestão para o restaurante, permitindo:
 
 * Controle de produtos
 * Controle de estoque
@@ -322,17 +322,6 @@ Fluxos testados:
 * Baixa automática de estoque
 * Cancelamento de pedidos
 * Retorno automático ao estoque
-
----
-
-# 📈 Melhorias Futuras
-
-* Dashboard administrativo
-* Relatórios PDF
-* Upload de imagens
-* Frontend React
-* Deploy em produção
-* Docker
 
 ---
 
