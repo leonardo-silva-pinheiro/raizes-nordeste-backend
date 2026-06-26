@@ -1,0 +1,22 @@
+{
+  "name": "raizes-do-nordeste-api",
+  "version": "1.0.0",
+  "description": "API Backend - Rede Raízes do Nordeste",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/config/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.4.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "swagger-ui-express": "^5.0.0",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}

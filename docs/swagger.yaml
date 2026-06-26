@@ -1,0 +1,290 @@
+openapi: 3.0.0
+info:
+  title: Raízes do Nordeste API
+  description: |
+    API Backend para a rede de lanchonetes "Raízes do Nordeste".
+    Suporta múltiplos canais (APP, TOTEM, BALCAO, PICKUP, WEB), gestão de pedidos,
+    controle de estoque por unidade, pagamento mock, promoções/campanhas,
+    programa de fidelização e auditoria de ações sensíveis.
+  version: 1.1.0
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor local de desenvolvimento
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErroResponse:
+      type: object
+      properties:
+        error: { type: string, example: VALIDACAO }
+        message: { type: string, example: Campo obrigatório não informado. }
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              issue: { type: string }
+        timestamp: { type: string, format: date-time }
+        path: { type: string }
+
+    LoginRequest:
+      type: object
+      required: [email, senha]
+      properties:
+        email: { type: string, example: cliente@raizes.com }
+        senha: { type: string, example: "Senha@123" }
+
+    CriarPedidoRequest:
+      type: object
+      required: [unidade_id, canal_pedido, itens]
+      properties:
+        unidade_id: { type: integer, example: 1 }
+        canal_pedido:
+          type: string
+          enum: [APP, TOTEM, BALCAO, PICKUP, WEB]
+          example: APP
+        itens:
+          type: array
+          items:
+            type: object
+            properties:
+              produto_id: { type: integer, example: 1 }
+              quantidade: { type: integer, example: 2 }
+        forma_pagamento: { type: string, example: MOCK }
+
+    CriarPromocaoRequest:
+      type: object
+      required: [nome, tipo, valor]
+      properties:
+        nome: { type: string, example: Junina App }
+        descricao: { type: string, example: 10% de desconto em pedidos pelo app }
+        tipo: { type: string, enum: [PERCENTUAL, VALOR_FIXO], example: PERCENTUAL }
+        valor: { type: number, example: 10 }
+        canal_pedido: { type: string, enum: [APP, TOTEM, BALCAO, PICKUP, WEB], nullable: true }
+        unidade_id: { type: integer, nullable: true }
+        valido_ate: { type: string, format: date, example: "2026-06-30" }
+
+paths:
+  /auth/cadastro:
+    post:
+      tags: [Auth]
+      summary: Cadastrar novo cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome, email, senha, consentimento_lgpd]
+              properties:
+                nome: { type: string, example: Maria Silva }
+                email: { type: string, example: maria@email.com }
+                senha: { type: string, example: "Senha@123" }
+                consentimento_lgpd: { type: boolean, example: true }
+      responses:
+        "201": { description: Cadastrado com sucesso }
+        "409": { description: E-mail já cadastrado }
+        "422": { description: Dados inválidos, schema: { $ref: "#/components/schemas/ErroResponse" } }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login e obtenção do token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  tokenType: { type: string, example: Bearer }
+                  expiresIn: { type: integer, example: 28800 }
+                  user:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      nome: { type: string }
+                      email: { type: string }
+                      perfil: { type: string }
+        "401": { description: Credenciais inválidas }
+
+  /unidades:
+    get:
+      tags: [Unidades]
+      summary: Listar todas as unidades ativas
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200": { description: Lista de unidades }
+        "401": { description: Não autenticado }
+
+  /unidades/{id}/cardapio:
+    get:
+      tags: [Unidades]
+      summary: Cardápio disponível em uma unidade
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Cardápio da unidade }
+        "404": { description: Unidade não encontrada }
+
+  /produtos:
+    get:
+      tags: [Produtos]
+      summary: Listar produtos com paginação
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        "200": { description: Lista paginada de produtos }
+
+  /pedidos:
+    post:
+      tags: [Pedidos]
+      summary: Criar novo pedido (fluxo crítico, com promoção automática)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CriarPedidoRequest" }
+      responses:
+        "201": { description: Pedido criado com resultado do pagamento mock e promoção aplicada (se houver) }
+        "404": { description: Produto ou unidade não encontrada }
+        "409": { description: Estoque insuficiente }
+        "422": { description: canalPedido inválido ou ausente }
+
+    get:
+      tags: [Pedidos]
+      summary: Listar pedidos com filtros
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: canalPedido
+          in: query
+          schema: { type: string, enum: [APP, TOTEM, BALCAO, PICKUP, WEB] }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [AGUARDANDO_PAGAMENTO, PAGO, CANCELADO, EM_PREPARO, PRONTO, ENTREGUE]
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        "200": { description: Lista de pedidos }
+
+  /pedidos/{id}/status:
+    patch:
+      tags: [Pedidos]
+      summary: Atualizar status do pedido (cozinha/atendente)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [EM_PREPARO, PRONTO, ENTREGUE, CANCELADO]
+      responses:
+        "200": { description: Status atualizado }
+        "404": { description: Pedido não encontrado }
+        "409": { description: Pedido já finalizado }
+
+  /fidelidade:
+    get:
+      tags: [Fidelidade]
+      summary: Consultar pontos do cliente logado
+      security: [{ BearerAuth: [] }]
+      responses:
+        "200": { description: Saldo de pontos e histórico }
+
+  /fidelidade/resgatar:
+    post:
+      tags: [Fidelidade]
+      summary: Resgatar pontos do programa de fidelidade
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pontos: { type: integer, example: 50 }
+      responses:
+        "200": { description: Pontos resgatados e desconto aplicado }
+        "409": { description: Pontos insuficientes }
+
+  /promocoes:
+    get:
+      tags: [Promoções]
+      summary: Listar promoções/campanhas ativas
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: canal_pedido
+          in: query
+          schema: { type: string, enum: [APP, TOTEM, BALCAO, PICKUP, WEB] }
+        - name: unidade_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200": { description: Lista de promoções ativas e válidas }
+    post:
+      tags: [Promoções]
+      summary: Criar nova promoção/campanha (ADMIN/GERENTE)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CriarPromocaoRequest" }
+      responses:
+        "201": { description: Promoção criada }
+        "422": { description: Dados inválidos }
+        "403": { description: Sem permissão }
+
+  /auditoria:
+    get:
+      tags: [Auditoria]
+      summary: Consultar logs de auditoria (ADMIN)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: acao
+          in: query
+          schema: { type: string, example: CRIAR_PEDIDO }
+        - name: usuario_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200": { description: Lista paginada de logs de auditoria }
+        "403": { description: Sem permissão (somente ADMIN) }
