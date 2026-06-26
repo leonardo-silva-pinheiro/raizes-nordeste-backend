@@ -10,7 +10,7 @@ API REST para gestão da rede de lanchonetes "Raízes do Nordeste".
 - **Swagger UI** — documentação interativa
 
 ## Pré-requisitos
-- Node.js 18+ instalado
+- Node.js v20.20.2
 - npm
 
 ---
