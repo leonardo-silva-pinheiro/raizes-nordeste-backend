@@ -1,1 +1,14 @@
+# 📦 Dependências do Node
 node_modules/
+
+# 🗄️ Banco de Dados SQLite e arquivos temporários (essencial tirar)
+raizes.db
+raizes.db-shm
+raizes.db-wal
+*.db
+
+# 🔑 Arquivos de configuração local (deixe o .env.example ir para o GitHub, mas ignore o .env real se criar um)
+.env
+
+# 🪟 Arquivo do sistema operacional Windows
+desktop.ini
